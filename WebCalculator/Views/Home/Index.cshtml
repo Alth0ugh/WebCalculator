@@ -1,0 +1,226 @@
+﻿@model CalculatorViewModel
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculator</title>
+    <style>
+        .container {
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+        }
+
+        .calculator-container {
+            margin-right: 20px;
+        }
+        .full-width-div {
+            width: 100%;
+            background-color: #f0f0f0; 
+        }
+        .calculator {
+            width: 300px;
+            margin: 0 auto;
+            border: 1px solid #ccc;
+            padding: 10px;
+            border-radius: 5px;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            grid-gap: 5px;
+        }
+        .calculator input[type="text"] {
+            grid-column: span 4;
+            width: calc(100% - 20px);
+            margin-bottom: 10px;
+            padding: 5px;
+        }
+        .calculator input[type="button"] {
+            padding: 10px;
+            margin: 0;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .calculator input[type="button"].equals {
+            grid-column: span 4;
+        }
+
+        .selector {
+            display: flex; /* Use flexbox for layout */
+        }
+
+        #textList {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+        }
+
+            #textList li {
+                margin-bottom: 5px;
+            }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="calculator-container">
+            <div class="calculator">
+                <input id="display" type="text" readonly />
+                <input id="btn1" type="button" value="1">
+                <input id="btn2" type="button" value="2">
+                <input id="btn3" type="button" value="3">
+                <input id="btnplus" type="button" value="+">
+                <input id="btn4" type="button" value="4">
+                <input id="btn5" type="button" value="5">
+                <input id="btn6" type="button" value="6">
+                <input id="btnminus" type="button" value="-">
+                <input id="btn7" type="button" value="7">
+                <input id="btn8" type="button" value="8">
+                <input id="btn9" type="button" value="9">
+                <input id="btnstar" type="button" value="*">
+                <input id="btn0" type="button" value="0">
+                <input id="btndecimal" type="button" value=".">
+                <input id="btnclear" type="button" value="C">
+                <input id="btndivide" type="button" value="/">
+                <input id="btnequals" type="button" value="=" class="equals">
+                <div class="selector">
+                    <label>Whole numbers</label>
+                    <input id="switch" type="checkbox">
+                </div>
+            </div>
+        </div>
+        <div>
+            <label>History:</label>
+            <ul id="textList">
+                @foreach (var text in Model.History)
+                {
+                    <li>@text</li>
+                }
+            </ul>
+        </div>
+    </div>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script>
+        var input = document.getElementById("display");
+        input.value = @Model.Display;
+
+        var model = @Html.Raw(Json.Serialize(Model));
+        $(document).ready(function () {
+            
+            for (var i = 0; i < 10; i++)
+            {
+                (function (index) {
+                    $("#btn" + i).click(function () {
+                        addNumber(index);
+                    });
+                })(i);
+                
+            }
+
+            $("#btnclear").click(function () {
+                $.ajax({
+                    type: "POST",
+                    url: "@Url.Action("Clear", "Home")",
+                    contentType: 'application/json',
+                    data: JSON.stringify({ Display: input.value }),
+                    success: function (response) {
+                        input.value = response.display;
+                    },
+                    error: function (xhr, status, error) {
+                        console.error(error);
+                    }
+                });
+            });
+
+            $("#btndecimal").click(function () {
+                $.ajax({
+                    type: "POST",
+                    url: "@Url.Action("Decimal", "Home")",
+                    contentType: 'application/json',
+                    data: JSON.stringify({ Display: input.value }),
+                    success: function (response) {
+                        input.value = response.display;
+                    },
+                    error: function (xhr, status, error) {
+                        console.error(error);
+                    }
+                });
+            });
+
+            $("#btnplus").click(function () {
+                applyOperator("+");
+            });
+
+            $("#btnminus").click(function () {
+                applyOperator("-");
+            });
+
+            $("#btnstar").click(function () {
+                applyOperator("*");
+            });
+
+            $("#btnequals").click(function () {
+                var checked = $("#switch").is(':checked');
+                $.ajax({
+                    type: "POST",
+                    url: "@Url.Action("Equals", "Home")",
+                    contentType: 'application/json',
+                    data: JSON.stringify({ Display: input.value, Whole: checked }),
+                    success: function (response) {
+                       input.value = response.display;
+
+                        var textList = document.getElementById("textList");
+                        textList.innerHTML = ""; // Clear existing list
+
+                        for (var i = 0; i < response.history.length; i++) {
+                            var li = document.createElement("li");
+                            li.textContent = response.history[i];
+                            textList.appendChild(li);
+                        }
+                    },
+                    error: function (xhr, status, error) {
+                        var errorMessage = JSON.parse(xhr.responseText).message;
+                        alert(errorMessage);
+                    }
+                });
+            });
+
+            $("#btndivide").click(function () {
+                applyOperator("/");
+            });
+
+            function applyOperator(operator) {
+                $.ajax({
+                    type: "POST",
+                    url: "@Url.Action("Operator", "Home")",
+                    contentType: 'application/json',
+                    data: JSON.stringify({ Display: input.value, Operator: operator }),
+                    success: function (response) {
+                        input.value = response.display;
+                    },
+                    error: function (xhr, status, error) {
+                        console.error(error);
+                    }
+                });
+            }
+
+            function addNumber(num) {
+                $.ajax({
+                    type: "POST",
+                    url: "@Url.Action("Add", "Home")",
+                    contentType: 'application/json',
+                    data: JSON.stringify({ Number: num, Display: input.value }),
+                    success: function (response) {
+                        input.value = response.display;
+                    },
+                    error: function (xhr, status, error) {
+                        console.error(error);
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>
